@@ -1,10 +1,11 @@
+
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { User, onAuthStateChanged, signOut } from 'firebase/auth';
+import firebase from 'firebase/compat/app';
 import { auth } from '../firebase/config';
 import toast from 'react-hot-toast';
 
 interface AuthContextType {
-  user: User | null;
+  user: firebase.User | null;
   loading: boolean;
   logout: () => void;
 }
@@ -16,11 +17,11 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<firebase.User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
       setUser(user);
       setLoading(false);
     });
@@ -30,7 +31,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-        await signOut(auth);
+        await auth.signOut();
         toast.success('Sesión cerrada exitosamente.');
     } catch (error) {
         console.error("Error signing out: ", error);

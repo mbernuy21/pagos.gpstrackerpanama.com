@@ -1,9 +1,8 @@
-
 import React, { useContext, useMemo } from 'react';
 import { Card, CardHeader, CardContent, Badge, Button } from '../ui';
 import { DataContext } from '../../hooks/DataContext';
 import { Client, PaymentFrequency, PaymentStatus } from '../../types';
-import { ArrowRight, BarChart2, DollarSign, UserCheck, UserX, Users } from 'lucide-react';
+import { ArrowRight, DollarSign, UserCheck, UserX, Users } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import type { View } from '../../App';
 
@@ -54,6 +53,26 @@ const PaymentsSummaryChart: React.FC<{data: {name: string, value: number}[]}> = 
     )
 }
 
+const MonthlyRevenueChart: React.FC<{data: {name: string, total: number}[]}> = ({data}) => {
+    return (
+         <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128, 128, 128, 0.2)" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip 
+                    contentStyle={{
+                        backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                        borderColor: 'rgba(128, 128, 128, 0.2)'
+                    }} 
+                />
+                <Legend />
+                <Bar dataKey="total" name="Ingresos" fill="#3b82f6" />
+            </BarChart>
+        </ResponsiveContainer>
+    )
+}
+
 const UpcomingPayments: React.FC<{clients: Client[]}> = ({ clients }) => {
     const today = new Date();
     const upcoming = clients
@@ -89,13 +108,13 @@ const UpcomingPayments: React.FC<{clients: Client[]}> = ({ clients }) => {
 export const Dashboard: React.FC<{setView: (view: View) => void}> = ({setView}) => {
     const context = useContext(DataContext);
 
-    const stats = useMemo(() => {
-        if (!context) return { totalClients: 0, monthlyRevenue: 0, paid: 0, pending: 0, overdue: 0, overdueCount: 0 };
+    const { stats, monthlyRevenueData } = useMemo(() => {
+        if (!context) return { stats: { totalClients: 0, monthlyRevenue: 0, paid: 0, pending: 0, overdue: 0, overdueCount: 0 }, monthlyRevenueData: [] };
         
         const today = new Date();
         const clientStatus = context.clients.map(c => getClientPaymentStatus(c, today));
         
-        return {
+        const stats = {
             totalClients: context.clients.length,
             monthlyRevenue: context.clients.reduce((acc, c) => c.paymentFrequency === PaymentFrequency.Monthly ? acc + c.paymentAmount : acc, 0),
             paid: clientStatus.filter(s => s === PaymentStatus.Paid).length,
@@ -103,12 +122,30 @@ export const Dashboard: React.FC<{setView: (view: View) => void}> = ({setView}) 
             overdue: clientStatus.filter(s => s === PaymentStatus.Overdue).length,
             overdueCount: clientStatus.filter(s => s === PaymentStatus.Overdue).length,
         };
+
+        const revenueData: {name: string, total: number}[] = [];
+        const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+        
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date();
+            d.setMonth(d.getMonth() - i);
+            const month = d.getMonth();
+            const year = d.getFullYear();
+            
+            const total = context.payments
+                .filter(p => new Date(p.paymentDate).getMonth() === month && new Date(p.paymentDate).getFullYear() === year)
+                .reduce((acc, p) => acc + p.amount, 0);
+
+            revenueData.push({ name: monthNames[month], total });
+        }
+
+        return { stats, monthlyRevenueData: revenueData };
     }, [context]);
 
     if (!context) return <div>Cargando...</div>;
 
     const { clients } = context;
-    const chartData = [
+    const paymentStatusChartData = [
         { name: PaymentStatus.Paid, value: stats.paid },
         { name: PaymentStatus.Pending, value: stats.pending },
         { name: PaymentStatus.Overdue, value: stats.overdue },
@@ -135,10 +172,21 @@ export const Dashboard: React.FC<{setView: (view: View) => void}> = ({setView}) 
                         <h3 className="font-semibold">Resumen de Estado de Pagos</h3>
                     </CardHeader>
                     <CardContent>
-                        <PaymentsSummaryChart data={chartData} />
+                        <PaymentsSummaryChart data={paymentStatusChartData} />
                     </CardContent>
                 </Card>
                  <UpcomingPayments clients={clients} />
+            </div>
+
+             <div className="grid gap-6">
+                 <Card>
+                    <CardHeader>
+                        <h3 className="font-semibold">Ingresos Mensuales (Últimos 6 meses)</h3>
+                    </CardHeader>
+                    <CardContent>
+                        <MonthlyRevenueChart data={monthlyRevenueData} />
+                    </CardContent>
+                </Card>
             </div>
 
             <div>

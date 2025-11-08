@@ -141,10 +141,19 @@ export const PaymentManagement: React.FC = () => {
 
   const clientsWithStatus = useMemo(() => {
     if (!context) return [];
-    const allClientsWithStatus = filteredClients.map(client => {
-      const { status, payment } = getClientPaymentStatusForMonth(client, filterMonth, filterYear, context.payments, new Date());
-      return { client, status, payment };
-    });
+    const allClientsWithStatus = filteredClients
+      .map(client => {
+        // For annual clients, only show them in their payment month for clarity
+        if (client.paymentFrequency === PaymentFrequency.Annual) {
+          const paymentMonth = new Date(client.nextPaymentDate).getUTCMonth() + 1;
+          if (paymentMonth !== filterMonth) {
+            return null;
+          }
+        }
+        const { status, payment } = getClientPaymentStatusForMonth(client, filterMonth, filterYear, context.payments, new Date());
+        return { client, status, payment };
+      })
+      .filter((item): item is { client: Client, status: PaymentStatus, payment: Payment | undefined } => item !== null);
 
     if (statusFilter === 'All') {
         return allClientsWithStatus;

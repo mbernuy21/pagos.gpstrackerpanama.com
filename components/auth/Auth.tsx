@@ -1,15 +1,13 @@
+
+
 import React, { useState } from 'react';
+import firebase from 'firebase/compat/app';
 import { auth } from '../../firebase/config';
-import { 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword,
-    AuthError
-} from 'firebase/auth';
 import { Card, CardHeader, CardContent, Input, Button } from '../ui';
 import { MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const getFirebaseErrorMessage = (error: AuthError): string => {
+const getFirebaseErrorMessage = (error: firebase.auth.AuthError): string => {
     switch (error.code) {
         case 'auth/invalid-email':
             return 'El formato del correo electrónico no es válido.';
@@ -36,15 +34,15 @@ export const Auth: React.FC = () => {
     setIsLoading(true);
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        await auth.signInWithEmailAndPassword(email, password);
         toast.success('¡Bienvenido de nuevo!');
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        await auth.createUserWithEmailAndPassword(email, password);
         toast.success('¡Cuenta creada exitosamente!');
       }
     } catch (error) {
         console.error("Authentication error:", error);
-        toast.error(getFirebaseErrorMessage(error as AuthError));
+        toast.error(getFirebaseErrorMessage(error as firebase.auth.AuthError));
     } finally {
         setIsLoading(false);
     }

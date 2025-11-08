@@ -1,25 +1,16 @@
+
 import { useState, useEffect, useCallback } from 'react';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
 import { Client, Payment } from '../types';
 import { IDataContext } from './DataContext';
 import { db } from '../firebase/config';
-import { 
-    collection, 
-    query, 
-    where, 
-    getDocs, 
-    addDoc, 
-    updateDoc, 
-    deleteDoc, 
-    doc,
-    writeBatch,
-    Timestamp
-} from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 // Helper to convert Firestore Timestamps to ISO strings
 const convertTimestamps = (data: any) => {
     for (const key in data) {
-        if (data[key] instanceof Timestamp) {
+        if (data[key] instanceof firebase.firestore.Timestamp) {
             data[key] = data[key].toDate().toISOString();
         }
     }
@@ -38,13 +29,13 @@ export function useFirestoreData(userId?: string): IDataContext {
     };
     setLoading(true);
     try {
-        const clientQuery = query(collection(db, 'clients'), where('userId', '==', userId));
-        const clientSnapshot = await getDocs(clientQuery);
+        const clientQuery = db.collection('clients').where('userId', '==', userId);
+        const clientSnapshot = await clientQuery.get();
         const clientsData = clientSnapshot.docs.map(doc => ({ id: doc.id, ...convertTimestamps(doc.data()) })) as Client[];
         setClients(clientsData);
 
-        const paymentQuery = query(collection(db, 'payments'), where('userId', '==', userId));
-        const paymentSnapshot = await getDocs(paymentQuery);
+        const paymentQuery = db.collection('payments').where('userId', '==', userId);
+        const paymentSnapshot = await paymentQuery.get();
         const paymentsData = paymentSnapshot.docs.map(doc => ({ id: doc.id, ...convertTimestamps(doc.data()) })) as Payment[];
         setPayments(paymentsData);
 
@@ -67,13 +58,13 @@ export function useFirestoreData(userId?: string): IDataContext {
         userId,
         registrationDate: new Date().toISOString()
     };
-    const docRef = await addDoc(collection(db, 'clients'), newClient);
+    const docRef = await db.collection('clients').add(newClient);
     setClients(prev => [...prev, { ...newClient, id: docRef.id }]);
   };
 
   const addMultipleClients = async (newClients: Omit<Client, 'id' | 'registrationDate' | 'userId'>[]) => {
     if (!userId) throw new Error("Usuario no autenticado.");
-    const batch = writeBatch(db);
+    const batch = db.batch();
     const clientsToAdd: Client[] = [];
 
     newClients.forEach(client => {
@@ -82,7 +73,7 @@ export function useFirestoreData(userId?: string): IDataContext {
             userId,
             registrationDate: new Date().toISOString()
         };
-        const docRef = doc(collection(db, 'clients'));
+        const docRef = db.collection('clients').doc();
         batch.set(docRef, clientData);
         clientsToAdd.push({ ...clientData, id: docRef.id });
     });
@@ -92,18 +83,18 @@ export function useFirestoreData(userId?: string): IDataContext {
   };
 
   const updateClient = async (updatedClient: Client) => {
-    const clientRef = doc(db, 'clients', updatedClient.id);
-    await updateDoc(clientRef, updatedClient);
+    const clientRef = db.collection('clients').doc(updatedClient.id);
+    await clientRef.update(updatedClient);
     setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
   };
   
   const deleteClient = async (clientId: string) => {
-    await deleteDoc(doc(db, 'clients', clientId));
+    await db.collection('clients').doc(clientId).delete();
     // Also delete associated payments
-    const batch = writeBatch(db);
+    const batch = db.batch();
     const paymentsToDelete = payments.filter(p => p.clientId === clientId);
     paymentsToDelete.forEach(p => {
-        batch.delete(doc(db, 'payments', p.id));
+        batch.delete(db.collection('payments').doc(p.id));
     });
     await batch.commit();
 
@@ -117,7 +108,7 @@ export function useFirestoreData(userId?: string): IDataContext {
         ...paymentData,
         userId
     };
-    const docRef = await addDoc(collection(db, 'payments'), newPayment);
+    const docRef = await db.collection('payments').add(newPayment);
     setPayments(prev => [...prev, { ...newPayment, id: docRef.id }]);
   };
 
