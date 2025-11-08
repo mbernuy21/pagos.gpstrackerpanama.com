@@ -1,21 +1,31 @@
+
 import React, { useState, useContext } from 'react';
 import { Card, CardHeader, CardContent, Input, Button } from '../ui';
 import { MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AuthContext } from '../../hooks/AuthContext'; // Import AuthContext
+// FIX: Updated Firebase AuthError type import to use the modular Firebase SDK.
+import type { AuthError } from 'firebase/auth'; 
 
-const getErrorMessage = (error: Error): string => {
-    // Generic error handling for mock auth
-    if (error.message.includes('mock/invalid-email')) {
-        return 'El formato del correo electrónico no es válido.';
-    } else if (error.message.includes('mock/wrong-password')) {
-        return 'Correo electrónico o contraseña incorrectos.';
-    } else if (error.message.includes('mock/email-already-in-use')) {
-        return 'Este correo electrónico ya está registrado.';
-    } else if (error.message.includes('mock/weak-password')) {
-        return 'La contraseña debe tener al menos 6 caracteres.';
+const getErrorMessage = (error: AuthError): string => {
+    switch (error.code) {
+        case 'auth/invalid-email':
+            return 'El formato del correo electrónico no es válido.';
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+            return 'Correo electrónico o contraseña incorrectos.';
+        case 'auth/email-already-in-use':
+            return 'Este correo electrónico ya está registrado.';
+        case 'auth/weak-password':
+            return 'La contraseña debe tener al menos 6 caracteres.';
+        case 'auth/network-request-failed':
+            return 'Error de red. Por favor, compruebe su conexión a Internet.';
+        case 'auth/too-many-requests':
+            return 'Demasiados intentos de inicio de sesión. Por favor, intente de nuevo más tarde.';
+        default:
+            console.error("Firebase Auth Error:", error.code, error.message);
+            return 'Ocurrió un error. Por favor, intente de nuevo.';
     }
-    return 'Ocurrió un error. Por favor, intente de nuevo.';
 }
 
 export const Auth: React.FC = () => {
@@ -39,9 +49,9 @@ export const Auth: React.FC = () => {
       } else {
         await register(email, password);
       }
-    } catch (error) {
-        console.error("Authentication error:", error);
-        toast.error(getErrorMessage(error as Error));
+    } catch (error: any) {
+        // Firebase AuthError objects have a 'code' property
+        toast.error(getErrorMessage(error as AuthError));
     } finally {
         setIsLoading(false);
     }

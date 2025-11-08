@@ -1,3 +1,6 @@
+
+import type { User as FirebaseUser } from 'firebase/auth';
+
 export enum PaymentFrequency {
   Monthly = 'Mensual',
   Annual = 'Anual',
@@ -41,7 +44,4 @@ export interface Payment {
   year: number;
 }
 
-export interface User {
-  uid: string;
-  email: string | null;
-}
+export type User = FirebaseUser; // Use Firebase's User type directly
