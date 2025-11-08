@@ -40,3 +40,8 @@ export interface Payment {
   month: number; // 1-12
   year: number;
 }
+
+export interface User {
+  uid: string;
+  email: string | null;
+}

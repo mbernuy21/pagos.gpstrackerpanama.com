@@ -12,6 +12,7 @@ const ai = new GoogleGenAI({ apiKey: API_KEY! });
 
 const generateGeminiResponse = async (
   model: 'gemini-2.5-flash' | 'gemini-2.5-pro',
+  // FIX: Updated `contents` parameter to be an array of chat history objects, matching the expected format for conversation context.
   contents: { role: 'user' | 'model', parts: { text: string }[] }[],
   systemInstruction: string,
   thinkingBudget?: number
@@ -25,7 +26,8 @@ const generateGeminiResponse = async (
     }
     const response = await ai.models.generateContent({
       model,
-      contents, // Pass the full conversation history
+      // FIX: The `contents` field now correctly passes the entire conversation history, which is essential for maintaining context in a chat-like interaction.
+      contents,
       config,
     });
     return response.text;

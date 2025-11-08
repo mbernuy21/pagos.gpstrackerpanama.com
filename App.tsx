@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useContext } from 'react';
 import { Layout, Sidebar, Header } from './components/layout/Layout';
 import { Dashboard } from './components/dashboard/Dashboard';
@@ -19,7 +18,8 @@ const AppContent: React.FC = () => {
   const { user, loading } = useContext(AuthContext)!;
   const [view, setView] = useState<View>('dashboard');
   
-  const data = useFirestoreData(user?.uid);
+  // No more temporary bypass, rely directly on AuthContext's user and loading state
+  const data = useFirestoreData(user?.uid); // Pass userId if logged in
 
   const contextValue = useMemo(() => data, [data]);
 
@@ -29,7 +29,7 @@ const AppContent: React.FC = () => {
     { name: 'Pagos', icon: FileText, view: 'payments' as View },
   ];
   
-  if (loading || (user && data.loading)) {
+  if (loading || (user && data.loading)) { // Show loader if auth is loading or if data is loading for a logged-in user
       return (
           <div className="flex items-center justify-center h-screen bg-slate-100 dark:bg-slate-900">
               <Loader className="w-12 h-12 animate-spin text-primary-500" />
@@ -37,6 +37,7 @@ const AppContent: React.FC = () => {
       )
   }
 
+  // Render Auth component if no user is logged in
   if (!user) {
     return <Auth />;
   }

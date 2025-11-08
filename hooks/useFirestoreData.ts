@@ -1,58 +1,51 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/firestore';
 import { Client, Payment } from '../types';
 import { IDataContext } from './DataContext';
-import { db } from '../firebase/config';
+import { db } from '../firebase/config'; // Import the mock db
 import toast from 'react-hot-toast';
-
-// Helper to convert Firestore Timestamps to ISO strings
-const convertTimestamps = (data: any) => {
-    for (const key in data) {
-        if (data[key] instanceof firebase.firestore.Timestamp) {
-            data[key] = data[key].toDate().toISOString();
-        }
-    }
-    return data;
-}
 
 export function useFirestoreData(userId?: string): IDataContext {
   const [clients, setClients] = useState<Client[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Function to load initial data from mock DB
   const fetchData = useCallback(async () => {
-    if (!userId) {
-        setLoading(false);
-        return;
-    };
     setLoading(true);
     try {
-        const clientQuery = db.collection('clients').where('userId', '==', userId);
-        const clientSnapshot = await clientQuery.get();
-        const clientsData = clientSnapshot.docs.map(doc => ({ id: doc.id, ...convertTimestamps(doc.data()) })) as Client[];
-        setClients(clientsData);
+      // Simulate fetching data with the mock db
+      const clientSnapshot = await db.collection('clients').where('userId', '==', userId).get();
+      const clientsData = clientSnapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) as Client[];
+      setClients(clientsData);
 
-        const paymentQuery = db.collection('payments').where('userId', '==', userId);
-        const paymentSnapshot = await paymentQuery.get();
-        const paymentsData = paymentSnapshot.docs.map(doc => ({ id: doc.id, ...convertTimestamps(doc.data()) })) as Payment[];
-        setPayments(paymentsData);
+      const paymentSnapshot = await db.collection('payments').where('userId', '==', userId).get();
+      const paymentsData = paymentSnapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) as Payment[];
+      setPayments(paymentsData);
 
     } catch (error) {
-        console.error("Error fetching data from Firestore: ", error);
-        toast.error("Error al cargar los datos.");
+      console.error("Error fetching data from mock Firestore: ", error);
+      toast.error("Error al cargar los datos mock.");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   }, [userId]);
 
+  // Effect to fetch data when userId changes or on component mount
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (userId) {
+      fetchData();
+    } else {
+      setClients([]);
+      setPayments([]);
+      setLoading(false);
+    }
+  }, [userId, fetchData]);
 
   const addClient = async (clientData: Omit<Client, 'id' | 'registrationDate' | 'userId'>) => {
-    if (!userId) throw new Error("Usuario no autenticado.");
+    if (!userId) {
+      toast.error("Usuario no autenticado para añadir cliente.");
+      return;
+    }
     const newClient = {
         ...clientData,
         userId,
@@ -63,7 +56,10 @@ export function useFirestoreData(userId?: string): IDataContext {
   };
 
   const addMultipleClients = async (newClients: Omit<Client, 'id' | 'registrationDate' | 'userId'>[]) => {
-    if (!userId) throw new Error("Usuario no autenticado.");
+    if (!userId) {
+      toast.error("Usuario no autenticado para añadir múltiples clientes.");
+      return;
+    }
     const batch = db.batch();
     const clientsToAdd: Client[] = [];
 
@@ -73,8 +69,8 @@ export function useFirestoreData(userId?: string): IDataContext {
             userId,
             registrationDate: new Date().toISOString()
         };
-        const docRef = db.collection('clients').doc();
-        batch.set(docRef, clientData);
+        const docRef = db.collection('clients').doc(); // Mock doc ref
+        batch.set(db._docRef('clients', docRef.id), clientData); // Use mock docRef
         clientsToAdd.push({ ...clientData, id: docRef.id });
     });
     
@@ -83,18 +79,17 @@ export function useFirestoreData(userId?: string): IDataContext {
   };
 
   const updateClient = async (updatedClient: Client) => {
-    const clientRef = db.collection('clients').doc(updatedClient.id);
-    await clientRef.update(updatedClient);
+    await db.collection('clients').doc(updatedClient.id).update(updatedClient);
     setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
   };
   
   const deleteClient = async (clientId: string) => {
     await db.collection('clients').doc(clientId).delete();
-    // Also delete associated payments
+    
     const batch = db.batch();
     const paymentsToDelete = payments.filter(p => p.clientId === clientId);
     paymentsToDelete.forEach(p => {
-        batch.delete(db.collection('payments').doc(p.id));
+        batch.delete(db._docRef('payments', p.id)); // Use mock docRef
     });
     await batch.commit();
 
@@ -103,7 +98,10 @@ export function useFirestoreData(userId?: string): IDataContext {
   };
 
   const addPayment = async (paymentData: Omit<Payment, 'id' | 'userId'>) => {
-    if (!userId) throw new Error("Usuario no autenticado.");
+    if (!userId) {
+      toast.error("Usuario no autenticado para añadir pago.");
+      return;
+    }
     const newPayment = {
         ...paymentData,
         userId

@@ -1,29 +1,30 @@
-
-
-import React, { useState } from 'react';
-import firebase from 'firebase/compat/app';
-import { auth } from '../../firebase/config';
+import React, { useState, useContext } from 'react';
 import { Card, CardHeader, CardContent, Input, Button } from '../ui';
 import { MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { AuthContext } from '../../hooks/AuthContext'; // Import AuthContext
 
-const getFirebaseErrorMessage = (error: firebase.auth.AuthError): string => {
-    switch (error.code) {
-        case 'auth/invalid-email':
-            return 'El formato del correo electrónico no es válido.';
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-            return 'Correo electrónico o contraseña incorrectos.';
-        case 'auth/email-already-in-use':
-            return 'Este correo electrónico ya está registrado.';
-        case 'auth/weak-password':
-            return 'La contraseña debe tener al menos 6 caracteres.';
-        default:
-            return 'Ocurrió un error. Por favor, intente de nuevo.';
+const getErrorMessage = (error: Error): string => {
+    // Generic error handling for mock auth
+    if (error.message.includes('mock/invalid-email')) {
+        return 'El formato del correo electrónico no es válido.';
+    } else if (error.message.includes('mock/wrong-password')) {
+        return 'Correo electrónico o contraseña incorrectos.';
+    } else if (error.message.includes('mock/email-already-in-use')) {
+        return 'Este correo electrónico ya está registrado.';
+    } else if (error.message.includes('mock/weak-password')) {
+        return 'La contraseña debe tener al menos 6 caracteres.';
     }
+    return 'Ocurrió un error. Por favor, intente de nuevo.';
 }
 
 export const Auth: React.FC = () => {
+  const authContext = useContext(AuthContext);
+  if (!authContext) {
+    throw new Error("Auth must be used within an AuthProvider");
+  }
+  const { login, register } = authContext;
+
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,15 +35,13 @@ export const Auth: React.FC = () => {
     setIsLoading(true);
     try {
       if (isLogin) {
-        await auth.signInWithEmailAndPassword(email, password);
-        toast.success('¡Bienvenido de nuevo!');
+        await login(email, password);
       } else {
-        await auth.createUserWithEmailAndPassword(email, password);
-        toast.success('¡Cuenta creada exitosamente!');
+        await register(email, password);
       }
     } catch (error) {
         console.error("Authentication error:", error);
-        toast.error(getFirebaseErrorMessage(error as firebase.auth.AuthError));
+        toast.error(getErrorMessage(error as Error));
     } finally {
         setIsLoading(false);
     }
