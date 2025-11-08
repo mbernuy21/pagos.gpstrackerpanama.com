@@ -1,5 +1,8 @@
 
-import type { User as FirebaseUser } from 'firebase/auth';
+
+// FIX: Changed Firebase User type import from named export to namespace import to resolve 'no exported member' error,
+// aligning with potential environment-specific type definition issues while maintaining Firebase v9 compatibility.
+import type * as FirebaseAuthTypes from 'firebase/auth';
 
 export enum PaymentFrequency {
   Monthly = 'Mensual',
@@ -44,4 +47,5 @@ export interface Payment {
   year: number;
 }
 
-export type User = FirebaseUser; // Use Firebase's User type directly
+// FIX: Use the User type from the FirebaseAuthTypes namespace.
+export type User = FirebaseAuthTypes.User; // Use Firebase's User type directly

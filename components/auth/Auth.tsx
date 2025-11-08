@@ -1,13 +1,15 @@
 
+
 import React, { useState, useContext } from 'react';
 import { Card, CardHeader, CardContent, Input, Button } from '../ui';
 import { MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AuthContext } from '../../hooks/AuthContext'; // Import AuthContext
 // FIX: Updated Firebase AuthError type import to use the modular Firebase SDK.
-import type { AuthError } from 'firebase/auth'; 
+// In Firebase v9, authentication errors are typically instances of FirebaseError, exported from 'firebase/app'.
+import type { FirebaseError } from 'firebase/app'; 
 
-const getErrorMessage = (error: AuthError): string => {
+const getErrorMessage = (error: FirebaseError): string => {
     switch (error.code) {
         case 'auth/invalid-email':
             return 'El formato del correo electrónico no es válido.';
@@ -51,7 +53,7 @@ export const Auth: React.FC = () => {
       }
     } catch (error: any) {
         // Firebase AuthError objects have a 'code' property
-        toast.error(getErrorMessage(error as AuthError));
+        toast.error(getErrorMessage(error as FirebaseError));
     } finally {
         setIsLoading(false);
     }

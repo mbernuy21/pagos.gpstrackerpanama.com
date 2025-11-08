@@ -1,20 +1,21 @@
 
+
 // Reverted to actual Firebase imports and configuration.
 // FIX: Updated Firebase imports to use the modular SDK (v9+).
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+// FIX: Changed 'getAuth' import from named export to namespace import to resolve 'no exported member' error,
+// aligning with potential environment-specific type definition issues while maintaining Firebase v9 compatibility.
+import * as FirebaseAuth from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// TODO: Replace with your actual Firebase project configuration object.
-// You can find this object in your Firebase project settings -> "Your apps" section -> "Web app" -> "Config".
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  measurementId: "YOUR_MEASUREMENT_ID" // Optional
+  apiKey: "AIzaSyAEAnhu4mzqnRKu5yRv4mh7PKCmwi5IeWA",
+  authDomain: "gps-tracker-cobros.firebaseapp.com",
+  projectId: "gps-tracker-cobros",
+  storageBucket: "gps-tracker-cobros.firebasestorage.app",
+  messagingSenderId: "1072959630335",
+  appId: "1:1072959630335:web:b77054dc269e8302acd5ca"
 };
 
 // Initialize Firebase if it hasn't been initialized already
@@ -26,8 +27,8 @@ if (!getApps().length) {
   app = getApp();
 }
 
-// FIX: Use getAuth and getFirestore from modular SDK.
-const auth = getAuth(app);
+// FIX: Use getAuth from modular SDK via namespace import.
+const auth = FirebaseAuth.getAuth(app);
 const db = getFirestore(app);
 
 export { auth, db };

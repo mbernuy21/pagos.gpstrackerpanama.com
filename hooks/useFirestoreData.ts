@@ -1,22 +1,21 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Client, Payment } from '../types';
 import { IDataContext } from './DataContext';
 import { db } from '../firebase/config'; // Import the real db
 // FIX: Imported Timestamp directly from 'firebase/firestore' for modular SDK compatibility.
-import { Timestamp } from 'firebase/firestore'; 
+import { Timestamp, collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, writeBatch, onSnapshot } from 'firebase/firestore'; 
 import toast from 'react-hot-toast';
 
 // Helper to convert Firestore Timestamps to ISO strings
 const convertTimestampsToISO = (data: any) => {
   const newData = { ...data };
-  if (newData.registrationDate && newData.registrationDate.toDate) {
+  if (newData.registrationDate && newData.registrationDate instanceof Timestamp && newData.registrationDate.toDate) {
     newData.registrationDate = newData.registrationDate.toDate().toISOString();
   }
-  if (newData.nextPaymentDate && newData.nextPaymentDate.toDate) {
+  if (newData.nextPaymentDate && newData.nextPaymentDate instanceof Timestamp && newData.nextPaymentDate.toDate) {
     newData.nextPaymentDate = newData.nextPaymentDate.toDate().toISOString();
   }
-  if (newData.paymentDate && newData.paymentDate.toDate) {
+  if (newData.paymentDate && newData.paymentDate instanceof Timestamp && newData.paymentDate.toDate) {
     newData.paymentDate = newData.paymentDate.toDate().toISOString();
   }
   return newData;
@@ -28,43 +27,45 @@ export function useFirestoreData(userId?: string): IDataContext {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      if (userId) {
-        // Fetch clients
-        const clientSnapshot = await db.collection('clients').where('userId', '==', userId).get();
-        const clientsData = clientSnapshot.docs.map(doc => ({ 
-          id: doc.id, 
-          ...convertTimestampsToISO(doc.data()) 
-        })) as Client[];
-        setClients(clientsData);
+  // No longer needed since we are using onSnapshot for real-time updates
+  // const fetchData = useCallback(async () => {
+  //   setLoading(true);
+  //   try {
+  //     if (userId) {
+  //       // Fetch clients
+  //       const clientSnapshot = await db.collection('clients').where('userId', '==', userId).get();
+  //       const clientsData = clientSnapshot.docs.map(doc => ({ 
+  //         id: doc.id, 
+  //         ...convertTimestampsToISO(doc.data()) 
+  //       })) as Client[];
+  //       setClients(clientsData);
 
-        // Fetch payments
-        const paymentSnapshot = await db.collection('payments').where('userId', '==', userId).get();
-        const paymentsData = paymentSnapshot.docs.map(doc => ({ 
-          id: doc.id, 
-          ...convertTimestampsToISO(doc.data()) 
-        })) as Payment[];
-        setPayments(paymentsData);
-      } else {
-        setClients([]);
-        setPayments([]);
-      }
-    } catch (error) {
-      console.error("Error fetching data from Firestore: ", error);
-      toast.error("Error al cargar los datos.");
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
+  //       // Fetch payments
+  //       const paymentSnapshot = await db.collection('payments').where('userId', '==', userId).get();
+  //       const paymentsData = paymentSnapshot.docs.map(doc => ({ 
+  //         id: doc.id, 
+  //         ...convertTimestampsToISO(doc.data()) 
+  //       })) as Payment[];
+  //       setPayments(paymentsData);
+  //     } else {
+  //       setClients([]);
+  //       setPayments([]);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching data from Firestore: ", error);
+  //     toast.error("Error al cargar los datos.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, [userId]);
 
   useEffect(() => {
     if (userId) {
       // Setup real-time listeners for clients and payments
-      const unsubscribeClients = db.collection('clients')
-        .where('userId', '==', userId)
-        .onSnapshot(snapshot => {
+      const clientsCollectionRef = collection(db, 'clients');
+      const clientsQuery = query(clientsCollectionRef, where('userId', '==', userId));
+
+      const unsubscribeClients = onSnapshot(clientsQuery, snapshot => {
           const clientsData = snapshot.docs.map(doc => ({
             id: doc.id,
             ...convertTimestampsToISO(doc.data())
@@ -77,9 +78,10 @@ export function useFirestoreData(userId?: string): IDataContext {
           setLoading(false);
         });
 
-      const unsubscribePayments = db.collection('payments')
-        .where('userId', '==', userId)
-        .onSnapshot(snapshot => {
+      const paymentsCollectionRef = collection(db, 'payments');
+      const paymentsQuery = query(paymentsCollectionRef, where('userId', '==', userId));
+
+      const unsubscribePayments = onSnapshot(paymentsQuery, snapshot => {
           const paymentsData = snapshot.docs.map(doc => ({
             id: doc.id,
             ...convertTimestampsToISO(doc.data())
@@ -117,7 +119,7 @@ export function useFirestoreData(userId?: string): IDataContext {
           // FIX: Use Timestamp from direct import
           registrationDate: Timestamp.fromDate(new Date()) // Store as Firestore Timestamp
       };
-      const docRef = await db.collection('clients').add(newClient);
+      await addDoc(collection(db, 'clients'), newClient);
       toast.success('¡Cliente añadido exitosamente!');
     } catch (error) {
       console.error("Error adding client: ", error);
@@ -131,7 +133,7 @@ export function useFirestoreData(userId?: string): IDataContext {
       return;
     }
     try {
-      const batch = db.batch();
+      const batch = writeBatch(db); // Use writeBatch from modular SDK
       newClients.forEach(client => {
           const clientData = {
               ...client,
@@ -140,7 +142,7 @@ export function useFirestoreData(userId?: string): IDataContext {
               registrationDate: Timestamp.fromDate(new Date()), // Store as Firestore Timestamp
               nextPaymentDate: Timestamp.fromDate(new Date(client.nextPaymentDate)), // Ensure nextPaymentDate is also Timestamp
           };
-          const docRef = db.collection('clients').doc();
+          const docRef = doc(collection(db, 'clients')); // Get a new doc reference
           batch.set(docRef, clientData);
       });
       
@@ -165,7 +167,7 @@ export function useFirestoreData(userId?: string): IDataContext {
         registrationDate: Timestamp.fromDate(new Date(updatedClient.registrationDate)),
         nextPaymentDate: Timestamp.fromDate(new Date(updatedClient.nextPaymentDate)),
       }
-      await db.collection('clients').doc(updatedClient.id).update(clientDataForFirestore);
+      await updateDoc(doc(db, 'clients', updatedClient.id), clientDataForFirestore);
       toast.success('¡Cliente actualizado exitosamente!');
     } catch (error) {
       console.error("Error updating client: ", error);
@@ -179,14 +181,15 @@ export function useFirestoreData(userId?: string): IDataContext {
       return;
     }
     try {
-      const batch = db.batch();
+      const batch = writeBatch(db); // Use writeBatch from modular SDK
       // Delete client document
-      batch.delete(db.collection('clients').doc(clientId));
+      batch.delete(doc(db, 'clients', clientId));
       
       // Delete all associated payments
-      const paymentsSnapshot = await db.collection('payments').where('clientId', '==', clientId).get();
-      paymentsSnapshot.docs.forEach(doc => {
-          batch.delete(doc.ref);
+      const paymentsQuery = query(collection(db, 'payments'), where('clientId', '==', clientId));
+      const paymentsSnapshot = await getDocs(paymentsQuery);
+      paymentsSnapshot.docs.forEach(d => {
+          batch.delete(d.ref);
       });
       await batch.commit();
       toast.success('¡Cliente y pagos asociados eliminados exitosamente!');
@@ -208,7 +211,7 @@ export function useFirestoreData(userId?: string): IDataContext {
           // FIX: Use Timestamp from direct import
           paymentDate: Timestamp.fromDate(new Date(paymentData.paymentDate)) // Store as Firestore Timestamp
       };
-      await db.collection('payments').add(newPayment);
+      await addDoc(collection(db, 'payments'), newPayment);
       toast.success('¡Pago registrado exitosamente!');
     } catch (error) {
       console.error("Error adding payment: ", error);
