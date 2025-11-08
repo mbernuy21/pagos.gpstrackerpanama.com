@@ -1,8 +1,10 @@
 
+// Import the functions you need from the SDKs you need
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-// FIX: Changed Firebase User type import from named export to namespace import to resolve 'no exported member' error,
-// aligning with potential environment-specific type definition issues while maintaining Firebase v9 compatibility.
-import type * as FirebaseAuthTypes from 'firebase/auth';
+// Your web app's Firebase configuration
+import type { User } from 'firebase/auth'; // Direct import of User type
 
 export enum PaymentFrequency {
   Monthly = 'Mensual',
@@ -47,5 +49,5 @@ export interface Payment {
   year: number;
 }
 
-// FIX: Use the User type from the FirebaseAuthTypes namespace.
-export type User = FirebaseAuthTypes.User; // Use Firebase's User type directly
+// FIX: Removed redundant re-export of Firebase's User type. The direct import should be sufficient.
+export type FirebaseUser = User; // Renamed to avoid name collision and make explicit it's the Firebase User.

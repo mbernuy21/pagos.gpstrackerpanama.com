@@ -1,14 +1,22 @@
 
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { auth } from '../firebase/config';
+import { auth } from '../firebase/config'; 
 import toast from 'react-hot-toast';
-import { User } from '../types'; // Import the Firebase User type re-exported from types.ts
-// FIX: Changed Firebase authentication functions imports from named exports to a namespace import to resolve 'no exported member' errors,
-// aligning with potential environment-specific type definition issues while maintaining Firebase v9 compatibility.
-import * as FirebaseAuth from 'firebase/auth'; // Import modular auth functions
+// FIX: Updated to use `FirebaseUser` type from `types.ts` to prevent name collision with local `User` context and align with revised `types.ts`.
+import { FirebaseUser } from '../types'; 
+// Importar funciones de autenticación del SDK modular
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  // FIX: FirebaseError is correctly imported from firebase/auth for the modular SDK.
+  FirebaseError 
+} from 'firebase/auth';
 
 interface AuthContextType {
-  user: User | null;
+  // FIX: Updated to use `FirebaseUser` type.
+  user: FirebaseUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
@@ -22,29 +30,30 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // --- CAMBIOS PARA RESTAURAR AUTENTICACIÓN ---
+  // FIX: Updated to use `FirebaseUser` type.
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(true); // Inicia en true mientras se verifica el estado de autenticación
 
-  // Effect to listen to Firebase auth state changes
+  // Escucha cambios en el estado de autenticación de Firebase
   useEffect(() => {
-    // FIX: Use onAuthStateChanged from FirebaseAuth namespace.
-    const unsubscribe = FirebaseAuth.onAuthStateChanged(auth, (firebaseUser: User | null) => {
-      setUser(firebaseUser);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      // FIX: Cast firebaseUser to FirebaseUser type for consistency.
+      setUser(firebaseUser as FirebaseUser);
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
+  // Funciones de login, register y logout con llamadas reales a Firebase
   const login = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
-      // FIX: Use signInWithEmailAndPassword from FirebaseAuth namespace.
-      await FirebaseAuth.signInWithEmailAndPassword(auth, email, password);
-      toast.success('¡Bienvenido de nuevo!');
-    } catch (error: any) {
-      console.error("Error signing in: ", error);
-      throw error; // Re-throw to be caught by Auth component for specific error messages
+      await signInWithEmailAndPassword(auth, email, password);
+      toast.success('¡Inicio de sesión exitoso!');
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error; // Propagar el error para que el componente Auth lo maneje
     } finally {
       setLoading(false);
     }
@@ -53,12 +62,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
-      // FIX: Use createUserWithEmailAndPassword from FirebaseAuth namespace.
-      await FirebaseAuth.createUserWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(auth, email, password);
       toast.success('¡Cuenta creada exitosamente!');
-    } catch (error: any) {
-      console.error("Error creating user: ", error);
-      throw error; // Re-throw to be caught by Auth component
+    } catch (error) {
+      console.error("Register error:", error);
+      throw error; // Propagar el error para que el componente Auth lo maneje
     } finally {
       setLoading(false);
     }
@@ -66,17 +74,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
-      setLoading(true);
-      // FIX: Use signOut from FirebaseAuth namespace.
-      await FirebaseAuth.signOut(auth);
-      toast.success('Sesión cerrada exitosamente.');
+      await signOut(auth);
+      toast.success('¡Sesión cerrada!');
     } catch (error) {
-      console.error("Error signing out: ", error);
+      console.error("Logout error:", error);
       toast.error('Error al cerrar sesión.');
-    } finally {
-      setLoading(false);
     }
   }, []);
+  // --- FIN CAMBIOS ---
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout }}>

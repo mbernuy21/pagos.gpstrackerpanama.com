@@ -3,9 +3,8 @@
 // Reverted to actual Firebase imports and configuration.
 // FIX: Updated Firebase imports to use the modular SDK (v9+).
 import { initializeApp, getApps, getApp } from "firebase/app";
-// FIX: Changed 'getAuth' import from named export to namespace import to resolve 'no exported member' error,
-// aligning with potential environment-specific type definition issues while maintaining Firebase v9 compatibility.
-import * as FirebaseAuth from "firebase/auth";
+// FIX: `getAuth` and other authentication-related functions are correctly imported from `firebase/auth`.
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User, FirebaseError } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
@@ -27,8 +26,8 @@ if (!getApps().length) {
   app = getApp();
 }
 
-// FIX: Use getAuth from modular SDK via namespace import.
-const auth = FirebaseAuth.getAuth(app);
+// FIX: Directly uses the imported `getAuth` function.
+const auth = getAuth(app);
 const db = getFirestore(app);
 
 export { auth, db };

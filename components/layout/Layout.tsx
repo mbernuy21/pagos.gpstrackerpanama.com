@@ -1,10 +1,10 @@
 
-import React, { ReactNode, useContext } from 'react';
-import { Bell, Sun, Moon, MapPin, LogOut } from 'lucide-react';
+import React, { ReactNode, useContext } from 'react'; // Added useContext
+import { Bell, Sun, Moon, MapPin, LogOut } from 'lucide-react'; // Added LogOut
 import type { View } from '../../App';
 import type { LucideProps } from 'lucide-react';
-import { AuthContext } from '../../hooks/AuthContext';
-import { Button } from '../ui';
+import { AuthContext } from '../../hooks/AuthContext'; // Import AuthContext
+import { Button } from '../ui'; // Import Button for logout
 
 interface LayoutProps {
   children: ReactNode;
@@ -55,11 +55,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, navigati
 interface HeaderProps {
     currentView: View;
     navigationItems: { name: string; view: View }[];
+    // FIX: Removed `userEmail` from HeaderProps as user info now comes from AuthContext.
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentView, navigationItems }) => {
   const [isDark, setIsDark] = React.useState(document.documentElement.classList.contains('dark'));
-  const { user, logout } = useContext(AuthContext)!;
+  const { user, logout } = useContext(AuthContext)!; // Use AuthContext
   
   const toggleDarkMode = () => {
     document.documentElement.classList.toggle('dark');
@@ -74,16 +75,18 @@ export const Header: React.FC<HeaderProps> = ({ currentView, navigationItems }) 
         <h2 className="text-xl font-semibold capitalize">{currentViewName}</h2>
       </div>
       <div className="flex items-center space-x-2">
-        <span className="text-sm hidden sm:inline">{user?.email}</span>
+        <span className="text-sm hidden sm:inline">{user?.email || 'Invitado'}</span> {/* Display user email from context */}
         <button onClick={toggleDarkMode} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
           {isDark ? <Sun size={20} /> : <Moon size={20} />}
         </button>
         <button className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
           <Bell size={20} />
         </button>
-        <Button variant="ghost" onClick={logout} className="!p-2 h-auto text-slate-600 dark:text-slate-300">
-          <LogOut size={20} />
-        </Button>
+        {user && ( // Show LogOut button only if user is logged in
+            <Button variant="ghost" onClick={logout} className="!p-2 h-auto text-slate-600 dark:text-slate-300">
+              <LogOut size={20} />
+            </Button>
+        )}
       </div>
     </header>
   );

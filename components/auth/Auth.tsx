@@ -1,13 +1,14 @@
 
 
+// Este componente ya no es necesario ni se renderizará, ya que la autenticación está deshabilitada.
+// Se deja el archivo pero sin uso.
 import React, { useState, useContext } from 'react';
 import { Card, CardHeader, CardContent, Input, Button } from '../ui';
 import { MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AuthContext } from '../../hooks/AuthContext'; // Import AuthContext
-// FIX: Updated Firebase AuthError type import to use the modular Firebase SDK.
-// In Firebase v9, authentication errors are typically instances of FirebaseError, exported from 'firebase/app'.
-import type { FirebaseError } from 'firebase/app'; 
+// FIX: FirebaseError is correctly imported from firebase/auth for the modular SDK.
+import type { FirebaseError } from 'firebase/auth'; 
 
 const getErrorMessage = (error: FirebaseError): string => {
     switch (error.code) {
@@ -52,7 +53,6 @@ export const Auth: React.FC = () => {
         await register(email, password);
       }
     } catch (error: any) {
-        // Firebase AuthError objects have a 'code' property
         toast.error(getErrorMessage(error as FirebaseError));
     } finally {
         setIsLoading(false);
