@@ -10,19 +10,22 @@ if (!API_KEY) {
 
 const ai = new GoogleGenAI({ apiKey: API_KEY! });
 
-const generateContentWithBackoff = async (
+const generateGeminiResponse = async (
   model: 'gemini-2.5-flash' | 'gemini-2.5-pro',
-  prompt: string,
+  contents: { role: 'user' | 'model', parts: { text: string }[] }[],
+  systemInstruction: string,
   thinkingBudget?: number
 ) => {
   try {
-    const config: any = {};
+    const config: any = {
+      systemInstruction,
+    };
     if (thinkingBudget) {
       config.thinkingConfig = { thinkingBudget };
     }
     const response = await ai.models.generateContent({
       model,
-      contents: prompt,
+      contents, // Pass the full conversation history
       config,
     });
     return response.text;
@@ -61,10 +64,15 @@ export const getChatbotResponse = async (
     Cuando se te pida generar un informe, formatéalo claramente usando Markdown.
     ${dataContext}
     `;
+    
+  // The initial messages from the chatbot component are just for display.
+  // We filter out the initial bot message to not confuse the model.
+  const relevantHistory = history.filter(m => m.parts[0].text !== "¡Hola! ¿Cómo puedo ayudarte a gestionar tus cobros hoy?");
 
-  // For simplicity, we are not sending full history here but constructing a new prompt each time.
-  // A more advanced implementation would use `ai.chats.create`.
-  const fullPrompt = `${systemInstruction}\n\nPregunta del usuario: ${newMessage}`;
+  const conversationHistory = [
+      ...relevantHistory,
+      { role: 'user' as const, parts: [{ text: newMessage }] }
+  ];
 
-  return generateContentWithBackoff(model, fullPrompt, thinkingBudget);
+  return generateGeminiResponse(model, conversationHistory, systemInstruction, thinkingBudget);
 };

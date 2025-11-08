@@ -183,7 +183,9 @@ const StatementModal: React.FC<{
         const years = new Set(payments.filter(p => p.clientId === client.id).map(p => p.year));
         const currentYear = new Date().getFullYear();
         if(!years.has(currentYear)) years.add(currentYear);
-        return Array.from(years).sort((a,b) => b-a);
+        // FIX: Explicitly convert values to numbers before subtracting to prevent type errors
+        // if a payment record is missing a year and results in a non-numeric value.
+        return Array.from(years).sort((a,b) => Number(b) - Number(a));
     }, [payments, client.id]);
 
     const handleGeneratePdf = () => {
