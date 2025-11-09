@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Bot, Send, User, X, Zap, BrainCircuit, Loader } from 'lucide-react';
 import { getChatbotResponse } from '../../services/geminiService';

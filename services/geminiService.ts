@@ -8,7 +8,8 @@ if (!API_KEY) {
   console.warn("API_KEY environment variable not set. Gemini API calls will fail.");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY! });
+// Inicialización condicional de GoogleGenAI
+const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 const generateGeminiResponse = async (
   model: 'gemini-2.5-flash' | 'gemini-2.5-pro',
@@ -17,6 +18,9 @@ const generateGeminiResponse = async (
   systemInstruction: string,
   thinkingBudget?: number
 ) => {
+  if (!ai) {
+    return "Lo siento, el asistente de IA no está disponible porque la clave API de Gemini no está configurada. Por favor, contacta al administrador.";
+  }
   try {
     const config: any = {
       systemInstruction,

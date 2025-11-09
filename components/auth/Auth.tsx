@@ -1,4 +1,5 @@
 
+
 // Este componente ya no es necesario ni se renderizará, ya que la autenticación está deshabilitada.
 // Se deja el archivo pero sin uso.
 import React, { useState, useContext } from 'react';
