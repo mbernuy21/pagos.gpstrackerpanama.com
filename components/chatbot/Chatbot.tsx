@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Bot, Send, User, X, Zap, BrainCircuit, Loader } from 'lucide-react';
 import { getChatbotResponse } from '../../services/geminiService';
@@ -128,7 +126,6 @@ export const Chatbot: React.FC = () => {
                     </footer>
                 </div>
             )}
-            {/* FIX: Removed unsupported 'jsx' prop from style tag. This syntax is specific to frameworks like Next.js. */}
             <style>{`
                 @keyframes fade-in-up {
                     from { opacity: 0; transform: translateY(10px); }

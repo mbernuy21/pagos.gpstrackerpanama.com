@@ -1,10 +1,9 @@
-
 // Import the functions you need from the SDKs you need
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
-import type { User } from 'firebase/auth'; // Direct import of User type
+import { User } from 'firebase/auth'; // Direct import of User type
 
 export enum PaymentFrequency {
   Monthly = 'Mensual',

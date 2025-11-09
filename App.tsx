@@ -35,7 +35,7 @@ const AppContent: React.FC = () => {
   ];
   
   // Mostramos un loader si la autenticación o los datos de Firestore están cargando
-  if (data.loading || authLoading) { // Ajustado para que el loader se muestre si la autenticación O los datos de Firestore están cargando
+  if (authLoading || data.loading) { 
       return (
           <div className="flex items-center justify-center h-screen bg-slate-100 dark:bg-slate-900">
               <Loader className="w-12 h-12 animate-spin text-primary-500" />

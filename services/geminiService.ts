@@ -4,12 +4,8 @@ import { Client, Payment } from "../types";
 
 const API_KEY = process.env.API_KEY;
 
-if (!API_KEY) {
-  console.warn("API_KEY environment variable not set. Gemini API calls will fail.");
-}
-
-// Inicialización condicional de GoogleGenAI
-const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+// FIX: Removed global `ai` instance to allow for conditional initialization.
+// const ai = new GoogleGenAI({ apiKey: API_KEY! });
 
 const generateGeminiResponse = async (
   model: 'gemini-2.5-flash' | 'gemini-2.5-pro',
@@ -18,9 +14,15 @@ const generateGeminiResponse = async (
   systemInstruction: string,
   thinkingBudget?: number
 ) => {
-  if (!ai) {
-    return "Lo siento, el asistente de IA no está disponible porque la clave API de Gemini no está configurada. Por favor, contacta al administrador.";
+  // FIX: Added explicit check for API_KEY before initializing GoogleGenAI or making API calls.
+  if (!API_KEY) {
+    console.error("Gemini API_KEY is not set. Cannot make API calls.");
+    return "Lo siento, el asistente de IA no está configurado correctamente. Por favor, asegúrate de que la clave API de Gemini esté configurada en el entorno.";
   }
+
+  // FIX: Instantiate GoogleGenAI here, ensuring API_KEY is present.
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
+
   try {
     const config: any = {
       systemInstruction,
@@ -37,6 +39,10 @@ const generateGeminiResponse = async (
     return response.text;
   } catch (error) {
     console.error("Gemini API call failed:", error);
+    // FIX: Added a more specific error message if the error indicates an API key issue.
+    if (error instanceof Error && error.message.includes("API key")) {
+      return "Lo siento, parece que hay un problema con la clave API de Gemini. Por favor, verifica que sea válida y esté configurada correctamente.";
+    }
     return "Lo siento, encontré un error al procesar tu solicitud. Por favor, revisa la consola para más detalles.";
   }
 };

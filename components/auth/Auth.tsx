@@ -1,5 +1,3 @@
-
-
 // Este componente ya no es necesario ni se renderizará, ya que la autenticación está deshabilitada.
 // Se deja el archivo pero sin uso.
 import React, { useState, useContext } from 'react';
@@ -7,8 +5,8 @@ import { Card, CardHeader, CardContent, Input, Button } from '../ui';
 import { MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AuthContext } from '../../hooks/AuthContext'; // Import AuthContext
-// FIX: FirebaseError is correctly imported from firebase/app for the modular SDK.
-import type { FirebaseError } from 'firebase/app'; 
+// FIX: FirebaseError is correctly imported from firebase/auth for the modular SDK.
+import { FirebaseError } from 'firebase/auth'; 
 
 const getErrorMessage = (error: FirebaseError): string => {
     switch (error.code) {

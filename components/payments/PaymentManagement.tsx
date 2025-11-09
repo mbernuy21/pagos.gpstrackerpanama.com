@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useContext, useMemo } from 'react';
 import { Client, Payment, PaymentFrequency, PaymentStatus } from '../../types';
 import { DataContext } from '../../hooks/DataContext';
