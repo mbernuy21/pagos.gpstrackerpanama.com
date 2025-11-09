@@ -30,39 +30,63 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  // --- CAMBIOS PARA DESHABILITAR AUTENTICACIÓN TEMPORALMENTE ---
-  // Establece user como null y loading como false para que la app cargue la UI.
-  // Las funciones de login/register/logout no harán nada o mostrarán un mensaje.
-  const user: FirebaseUser | null = null; // Siempre null para deshabilitar auth
-  const loading = false; // Siempre false para no mostrar el loader de auth
+  // --- CAMBIOS PARA RESTAURAR AUTENTICACIÓN ---
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Funciones de login, register y logout ahora solo mostrarán un mensaje de error/advertencia.
   const login = useCallback(async (email: string, password: string) => {
-    toast.error("Autenticación deshabilitada temporalmente.");
-    console.warn("Autenticación deshabilitada. No se puede iniciar sesión.");
-    throw new Error("Autenticación deshabilitada."); // Para simular un fallo si se llama
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast.success("¡Inicio de sesión exitoso!");
+    } catch (error: any) {
+        // Manejo de errores específicos de Firebase
+        if (error instanceof FirebaseError) {
+          throw error; // Re-lanza para que el componente Auth lo maneje
+        }
+        console.error("Login failed:", error);
+        toast.error("Error al iniciar sesión.");
+        throw new Error("Error desconocido al iniciar sesión.");
+    } finally {
+      setLoading(false); // Se ajusta para que la autenticación establezca el loading a false al finalizar.
+    }
   }, []);
 
   const register = useCallback(async (email: string, password: string) => {
-    toast.error("Autenticación deshabilitada temporalmente.");
-    console.warn("Autenticación deshabilitada. No se puede registrar.");
-    throw new Error("Autenticación deshabilitada."); // Para simular un fallo si se llama
+    setLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      toast.success("¡Cuenta creada exitosamente!");
+    } catch (error: any) {
+        if (error instanceof FirebaseError) {
+          throw error; // Re-lanza para que el componente Auth lo maneje
+        }
+        console.error("Registration failed:", error);
+        toast.error("Error al registrarse.");
+        throw new Error("Error desconocido al registrarse.");
+    } finally {
+      setLoading(false); // Se ajusta para que la autenticación establezca el loading a false al finalizar.
+    }
   }, []);
 
   const logout = useCallback(async () => {
-    toast.error("Autenticación deshabilitada temporalmente.");
-    console.warn("Autenticación deshabilitada. No se puede cerrar sesión.");
+    try {
+      await signOut(auth);
+      toast.success("¡Sesión cerrada exitosamente!");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      toast.error("Error al cerrar sesión.");
+    }
   }, []);
 
-  // Elimina el useEffect que escucha onAuthStateChanged, ya no es necesario.
-  // useEffect(() => {
-  //   const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-  //     setUser(firebaseUser as FirebaseUser);
-  //     setLoading(false);
-  //   });
-  //   return () => unsubscribe();
-  // }, []);
-  // --- FIN CAMBIOS PARA DESHABILITAR AUTENTICACIÓN ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser as FirebaseUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+  // --- FIN CAMBIOS PARA RESTAURAR AUTENTICACIÓN ---
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout }}>

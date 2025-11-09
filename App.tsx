@@ -35,8 +35,7 @@ const AppContent: React.FC = () => {
   ];
   
   // Mostramos un loader si la autenticación o los datos de Firestore están cargando
-  // Se ha deshabilitado authLoading para que la UI principal se cargue más fácilmente.
-  if (data.loading && !authLoading) { // Ajustado para que el loader solo se muestre si los datos de Firestore cargan (authLoading siempre será false ahora)
+  if (data.loading || authLoading) { // Ajustado para que el loader se muestre si la autenticación O los datos de Firestore están cargando
       return (
           <div className="flex items-center justify-center h-screen bg-slate-100 dark:bg-slate-900">
               <Loader className="w-12 h-12 animate-spin text-primary-500" />
@@ -45,10 +44,9 @@ const AppContent: React.FC = () => {
   }
 
   // Si no hay usuario autenticado, mostramos la pantalla de autenticación
-  // ESTA LÍNEA SE HA COMENTADO TEMPORALMENTE PARA MOSTRAR LA UI PRINCIPAL.
-  // if (!user) {
-  //   return <Auth />;
-  // }
+  if (!user) {
+    return <Auth />;
+  }
 
   return (
     <DataContext.Provider value={contextValue}>
