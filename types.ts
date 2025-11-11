@@ -37,6 +37,7 @@ export interface Client {
   nextPaymentDate: string; // ISO string
   registrationDate: string; // ISO string
   notes?: string; // Nuevo campo opcional
+  isActive?: boolean; // Nuevo campo opcional para estado activo/inactivo
 }
 
 export interface Payment {

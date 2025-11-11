@@ -1,4 +1,5 @@
 
+
 import { Client, Payment } from '../types';
 
 declare const XLSX: any;
@@ -18,6 +19,7 @@ export const exportToExcel = (clients: Client[], payments: Payment[], getClientN
     'Próxima Fecha de Pago': new Date(c.nextPaymentDate).toLocaleDateString(),
     'Fecha de Registro': new Date(c.registrationDate).toLocaleDateString(),
     'Notas': c.notes || '', // Nuevo campo
+    'Estado Activo': c.isActive !== undefined ? (c.isActive ? 'Activo' : 'Inactivo') : 'N/A', // Nuevo campo
   })));
 
   // Payment Data Sheet

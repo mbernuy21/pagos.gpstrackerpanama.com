@@ -1,5 +1,4 @@
 
-
 import React, { useState, useContext, useMemo } from 'react';
 import { Client, Payment, PaymentFrequency, ServiceType } from '../../types';
 import { DataContext, IDataContext } from '../../hooks/DataContext';
@@ -82,12 +81,12 @@ const ImportModal: React.FC<{
         }
 
         const header = lines.shift()!.split('\t').map(h => h.trim());
-        // Añadir 'Notas' como encabezado esperado. Es opcional, así que la validación será más flexible.
-        const expectedHeaders = ['Nombre', 'RUC', 'Teléfono', 'Correo Electrónico', 'Tipo de Servicio', 'Unidades GPS', 'Monto de Pago', 'Frecuencia de Pago', 'Próxima Fecha de Pago', 'Notas'];
+        // Añadir 'Notas' y 'Estado Activo' como encabezados esperados. Son opcionales.
+        const expectedHeaders = ['Nombre', 'RUC', 'Teléfono', 'Correo Electrónico', 'Tipo de Servicio', 'Unidades GPS', 'Monto de Pago', 'Frecuencia de Pago', 'Próxima Fecha de Pago', 'Notas', 'Estado Activo'];
         
-        // Simple header validation, allowing for missing 'Notas' column
+        // Simple header validation, allowing for missing optional columns
         const validHeadersCount = expectedHeaders.filter(h => header.map(h => h.toLowerCase()).includes(h.toLowerCase())).length;
-        if (validHeadersCount < expectedHeaders.length -1) { // -1 because 'Notas' is optional
+        if (validHeadersCount < expectedHeaders.length - 2) { // -2 because 'Notas' and 'Estado Activo' are optional
              toast.error("Los encabezados no coinciden. Asegúrese de que las columnas están en el orden correcto.", { duration: 5000 });
              return;
         }
@@ -103,7 +102,7 @@ const ImportModal: React.FC<{
         lines.forEach((line, index) => {
             const data = line.split('\t');
             // Allow for data.length to be less than expectedHeaders.length if optional columns are missing
-            if (data.length < expectedHeaders.length - 1) { // -1 for optional 'Notas'
+            if (data.length < expectedHeaders.length - 2) { // -2 for optional 'Notas' and 'Estado Activo'
                 failedImports++;
                 console.warn(`Fila ${index + 2}: Número incorrecto de columnas.`);
                 return;
@@ -119,7 +118,8 @@ const ImportModal: React.FC<{
                 const paymentAmount = data[headerMap.get('monto de pago')!];
                 const paymentFrequency = data[headerMap.get('frecuencia de pago')!];
                 const nextPaymentDate = data[headerMap.get('próxima fecha de pago')!];
-                const notes = data[headerMap.get('notas')!]; // Get notes if present
+                const notes = headerMap.has('notas') ? data[headerMap.get('notas')!] : undefined; // Get notes if present
+                const isActiveStr = headerMap.has('estado activo') ? data[headerMap.get('estado activo')!] : undefined; // Get isActive if present
 
 
                 const isValidServiceType = Object.values(ServiceType).includes(serviceType as ServiceType);
@@ -133,7 +133,7 @@ const ImportModal: React.FC<{
 
                 clientsToImport.push({
                     name,
-                    ruc: ruc || undefined,
+                    ruc: ruc || null, // FIX: Change undefined to null
                     phone,
                     email,
                     serviceType: serviceType as ServiceType,
@@ -141,7 +141,8 @@ const ImportModal: React.FC<{
                     paymentAmount: parseFloat(paymentAmount),
                     paymentFrequency: paymentFrequency as PaymentFrequency,
                     nextPaymentDate: new Date(nextPaymentDate).toISOString(),
-                    notes: notes || undefined, // Add notes
+                    notes: notes || null, // FIX: Change undefined to null
+                    isActive: isActiveStr !== undefined ? (isActiveStr.toLowerCase() === 'true' || isActiveStr.toLowerCase() === 'activo') : undefined, // Add isActive
                 });
                 successfulImports++;
             } catch (e) {
@@ -158,8 +159,8 @@ const ImportModal: React.FC<{
         onClose();
     };
     
-    // Actualizar instrucciones para incluir 'Notas'
-    const instructions = "Nombre\tRUC\tTeléfono\tCorreo Electrónico\tTipo de Servicio\tUnidades GPS\tMonto de Pago\tFrecuencia de Pago\tPróxima Fecha de Pago\tNotas";
+    // Actualizar instrucciones para incluir 'Notas' y 'Estado Activo'
+    const instructions = "Nombre\tRUC\tTeléfono\tCorreo Electrónico\tTipo de Servicio\tUnidades GPS\tMonto de Pago\tFrecuencia de Pago\tPróxima Fecha de Pago\tNotas\tEstado Activo";
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Importar Clientes desde Sheets">
@@ -275,11 +276,14 @@ const ClientForm: React.FC<{ client?: Client; onClose: () => void, onSave: (clie
     paymentFrequency: client?.paymentFrequency || PaymentFrequency.Monthly,
     nextPaymentDate: client?.nextPaymentDate ? client.nextPaymentDate.split('T')[0] : '',
     notes: client?.notes || '', // Añadir campo de notas al estado
+    isActive: client?.isActive ?? true, // Añadir campo de estado activo/inactivo al estado, por defecto true
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    // Special handling for isActive to convert string to boolean
+    const newValue = name === 'isActive' ? value === 'true' : value;
+    setFormData(prev => ({ ...prev, [name]: newValue }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -294,7 +298,8 @@ const ClientForm: React.FC<{ client?: Client; onClose: () => void, onSave: (clie
         gpsUnits: Number(formData.gpsUnits),
         paymentAmount: Number(formData.paymentAmount),
         nextPaymentDate: adjustedDate.toISOString(),
-        notes: formData.notes || undefined, // Guardar notas, o undefined si está vacío
+        notes: formData.notes || null, // FIX: Guardar notas, o null si está vacío
+        isActive: formData.isActive, // Guardar el estado activo
     };
     
     if (client) {
@@ -321,6 +326,10 @@ const ClientForm: React.FC<{ client?: Client; onClose: () => void, onSave: (clie
             <option value={PaymentFrequency.Annual}>Anual</option>
         </Select>
         <Input label="Próxima Fecha de Pago" name="nextPaymentDate" type="date" value={formData.nextPaymentDate} onChange={handleChange} required />
+        <Select label="Estado del Cliente" name="isActive" value={formData.isActive ? 'true' : 'false'} onChange={handleChange} required>
+            <option value="true">Activo</option>
+            <option value="false">Inactivo</option>
+        </Select>
       </div>
       <Textarea label="Notas (Opcional)" name="notes" value={formData.notes} onChange={handleChange} rows={3} /> {/* Nuevo campo de notas */}
       <div className="flex justify-end space-x-2 pt-4">
@@ -343,12 +352,18 @@ export const ClientManagement: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   
+  // FIX: Updated isClientActive to prioritize client.isActive, with fallback to date-based logic
   const isClientActive = (client: Client): boolean => {
+      // If isActive is explicitly set, use that value
+      if (client.isActive !== undefined) {
+          return client.isActive;
+      }
+      // Fallback to date-based logic if isActive is not explicitly set
       const today = new Date();
       const nextPaymentDate = new Date(client.nextPaymentDate);
       const diffTime = today.getTime() - nextPaymentDate.getTime();
       const diffDays = diffTime / (1000 * 3600 * 24);
-      return diffDays <= 60; // Inactive if overdue by more than 60 days
+      return diffDays <= 60; // Inactivo si está vencido por más de 60 días
   };
 
   const filteredClients = useMemo(() => {
@@ -363,7 +378,7 @@ export const ClientManagement: React.FC = () => {
     if (statusFilter === 'all') return searchFiltered;
 
     return searchFiltered.filter(client => {
-        const active = isClientActive(client);
+        const active = isClientActive(client); // Use updated logic
         return statusFilter === 'active' ? active : !active;
     });
 
@@ -431,8 +446,8 @@ export const ClientManagement: React.FC = () => {
   }
   
   const handleCopyForSheets = () => {
-    // Actualizar encabezados para incluir 'Notas'
-    const header = ['Nombre', 'RUC', 'Teléfono', 'Correo Electrónico', 'Tipo de Servicio', 'Unidades GPS', 'Monto de Pago', 'Frecuencia de Pago', 'Próxima Fecha de Pago', 'Notas'].join('\t');
+    // Actualizar encabezados para incluir 'Notas' y 'Estado Activo'
+    const header = ['Nombre', 'RUC', 'Teléfono', 'Correo Electrónico', 'Tipo de Servicio', 'Unidades GPS', 'Monto de Pago', 'Frecuencia de Pago', 'Próxima Fecha de Pago', 'Notas', 'Estado Activo'].join('\t');
     const rows = filteredClients.map(c => [
         c.name,
         c.ruc || '',
@@ -443,7 +458,8 @@ export const ClientManagement: React.FC = () => {
         c.paymentAmount,
         c.paymentFrequency,
         new Date(c.nextPaymentDate).toISOString().split('T')[0],
-        c.notes || '' // Añadir notas
+        c.notes || '', // Añadir notas
+        c.isActive !== undefined ? c.isActive.toString() : '', // Añadir estado activo
     ].join('\t')).join('\n');
 
     navigator.clipboard.writeText(header + '\n' + rows).then(() => {
@@ -495,7 +511,7 @@ export const ClientManagement: React.FC = () => {
               </thead>
               <tbody>
                 {filteredClients.map(client => {
-                  const isActive = isClientActive(client);
+                  const isActive = isClientActive(client); // Use updated logic
                   return (
                     <tr key={client.id} className="bg-white dark:bg-slate-800 border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         <td className="px-6 py-4 font-medium whitespace-nowrap">{client.name}</td>
