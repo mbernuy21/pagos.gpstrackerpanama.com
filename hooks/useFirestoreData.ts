@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Client, Payment } from '../types';
 import { IDataContext } from './DataContext';
@@ -141,6 +142,7 @@ export function useFirestoreData(userId?: string): IDataContext {
               // FIX: Use Timestamp from direct import
               registrationDate: Timestamp.fromDate(new Date()), // Store as Firestore Timestamp
               nextPaymentDate: Timestamp.fromDate(new Date(client.nextPaymentDate)), // Ensure nextPaymentDate is also Timestamp
+              notes: client.notes || undefined, // Incluir notas
           };
           const docRef = doc(collection(db, 'clients')); // Get a new doc reference
           batch.set(docRef, clientData);
@@ -166,6 +168,7 @@ export function useFirestoreData(userId?: string): IDataContext {
         // FIX: Use Timestamp from direct import
         registrationDate: Timestamp.fromDate(new Date(updatedClient.registrationDate)),
         nextPaymentDate: Timestamp.fromDate(new Date(updatedClient.nextPaymentDate)),
+        notes: updatedClient.notes || undefined, // Incluir notas
       }
       await updateDoc(doc(db, 'clients', updatedClient.id), clientDataForFirestore);
       toast.success('¡Cliente actualizado exitosamente!');

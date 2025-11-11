@@ -17,6 +17,7 @@ export const exportToExcel = (clients: Client[], payments: Payment[], getClientN
     'Frecuencia de Pago': c.paymentFrequency,
     'Próxima Fecha de Pago': new Date(c.nextPaymentDate).toLocaleDateString(),
     'Fecha de Registro': new Date(c.registrationDate).toLocaleDateString(),
+    'Notas': c.notes || '', // Nuevo campo
   })));
 
   // Payment Data Sheet

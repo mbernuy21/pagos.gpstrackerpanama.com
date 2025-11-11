@@ -28,6 +28,9 @@ const generatePdf = (client: Client, payments: Payment[]) => {
     if (client.ruc) {
         doc.text(`RUC: ${client.ruc}`, 14, 60);
     }
+    if (client.notes) {
+        doc.text(`Notas: ${client.notes}`, 14, 65);
+    }
     doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString()}`, 140, 45);
 
     // Table
@@ -49,7 +52,7 @@ const generatePdf = (client: Client, payments: Payment[]) => {
     doc.autoTable({
         head: [tableColumn],
         body: tableRows,
-        startY: 70,
+        startY: 70, // Ajustar startY si se añaden más campos arriba
     });
     
     // Footer
@@ -79,13 +82,18 @@ const ImportModal: React.FC<{
         }
 
         const header = lines.shift()!.split('\t').map(h => h.trim());
-        const expectedHeaders = ['Nombre', 'RUC', 'Teléfono', 'Correo Electrónico', 'Tipo de Servicio', 'Unidades GPS', 'Monto de Pago', 'Frecuencia de Pago', 'Próxima Fecha de Pago'];
+        // Añadir 'Notas' como encabezado esperado. Es opcional, así que la validación será más flexible.
+        const expectedHeaders = ['Nombre', 'RUC', 'Teléfono', 'Correo Electrónico', 'Tipo de Servicio', 'Unidades GPS', 'Monto de Pago', 'Frecuencia de Pago', 'Próxima Fecha de Pago', 'Notas'];
         
-        // Simple header validation
-        if (expectedHeaders.some((h, i) => h.toLowerCase() !== header[i]?.toLowerCase())) {
+        // Simple header validation, allowing for missing 'Notas' column
+        const validHeadersCount = expectedHeaders.filter(h => header.map(h => h.toLowerCase()).includes(h.toLowerCase())).length;
+        if (validHeadersCount < expectedHeaders.length -1) { // -1 because 'Notas' is optional
              toast.error("Los encabezados no coinciden. Asegúrese de que las columnas están en el orden correcto.", { duration: 5000 });
              return;
         }
+        
+        const headerMap = new Map(header.map((h, i) => [h.toLowerCase(), i]));
+
 
         let successfulImports = 0;
         let failedImports = 0;
@@ -94,14 +102,25 @@ const ImportModal: React.FC<{
 
         lines.forEach((line, index) => {
             const data = line.split('\t');
-            if (data.length !== expectedHeaders.length) {
+            // Allow for data.length to be less than expectedHeaders.length if optional columns are missing
+            if (data.length < expectedHeaders.length - 1) { // -1 for optional 'Notas'
                 failedImports++;
                 console.warn(`Fila ${index + 2}: Número incorrecto de columnas.`);
                 return;
             }
 
             try {
-                const [name, ruc, phone, email, serviceType, gpsUnits, paymentAmount, paymentFrequency, nextPaymentDate] = data;
+                const name = data[headerMap.get('nombre')!];
+                const ruc = data[headerMap.get('ruc')!];
+                const phone = data[headerMap.get('teléfono')!];
+                const email = data[headerMap.get('correo electrónico')!];
+                const serviceType = data[headerMap.get('tipo de servicio')!];
+                const gpsUnits = data[headerMap.get('unidades gps')!];
+                const paymentAmount = data[headerMap.get('monto de pago')!];
+                const paymentFrequency = data[headerMap.get('frecuencia de pago')!];
+                const nextPaymentDate = data[headerMap.get('próxima fecha de pago')!];
+                const notes = data[headerMap.get('notas')!]; // Get notes if present
+
 
                 const isValidServiceType = Object.values(ServiceType).includes(serviceType as ServiceType);
                 const isValidFrequency = Object.values(PaymentFrequency).includes(paymentFrequency as PaymentFrequency);
@@ -122,6 +141,7 @@ const ImportModal: React.FC<{
                     paymentAmount: parseFloat(paymentAmount),
                     paymentFrequency: paymentFrequency as PaymentFrequency,
                     nextPaymentDate: new Date(nextPaymentDate).toISOString(),
+                    notes: notes || undefined, // Add notes
                 });
                 successfulImports++;
             } catch (e) {
@@ -138,7 +158,8 @@ const ImportModal: React.FC<{
         onClose();
     };
     
-    const instructions = "Nombre\tRUC\tTeléfono\tCorreo Electrónico\tTipo de Servicio\tUnidades GPS\tMonto de Pago\tFrecuencia de Pago\tPróxima Fecha de Pago";
+    // Actualizar instrucciones para incluir 'Notas'
+    const instructions = "Nombre\tRUC\tTeléfono\tCorreo Electrónico\tTipo de Servicio\tUnidades GPS\tMonto de Pago\tFrecuencia de Pago\tPróxima Fecha de Pago\tNotas";
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Importar Clientes desde Sheets">
@@ -197,6 +218,13 @@ const StatementModal: React.FC<{
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Estado de Cuenta: ${client.name}`}>
             <div className="space-y-4">
+                <p className="text-sm text-slate-500">
+                    <span className="font-semibold">Cliente:</span> {client.name}<br/>
+                    <span className="font-semibold">Correo:</span> {client.email}<br/>
+                    <span className="font-semibold">Teléfono:</span> {client.phone}<br/>
+                    {client.ruc && <><span className="font-semibold">RUC:</span> {client.ruc}<br/></>}
+                    {client.notes && <><span className="font-semibold">Notas:</span> {client.notes}<br/></>} {/* Mostrar notas */}
+                </p>
                 <div className="flex justify-between items-center">
                     <Select label="Año" value={filterYear} onChange={e => setFilterYear(Number(e.target.value))}>
                         {getYearsWithPayments.map(y => <option key={y} value={y}>{y}</option>)}
@@ -246,9 +274,10 @@ const ClientForm: React.FC<{ client?: Client; onClose: () => void, onSave: (clie
     paymentAmount: client?.paymentAmount || 0,
     paymentFrequency: client?.paymentFrequency || PaymentFrequency.Monthly,
     nextPaymentDate: client?.nextPaymentDate ? client.nextPaymentDate.split('T')[0] : '',
+    notes: client?.notes || '', // Añadir campo de notas al estado
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -265,6 +294,7 @@ const ClientForm: React.FC<{ client?: Client; onClose: () => void, onSave: (clie
         gpsUnits: Number(formData.gpsUnits),
         paymentAmount: Number(formData.paymentAmount),
         nextPaymentDate: adjustedDate.toISOString(),
+        notes: formData.notes || undefined, // Guardar notas, o undefined si está vacío
     };
     
     if (client) {
@@ -292,6 +322,7 @@ const ClientForm: React.FC<{ client?: Client; onClose: () => void, onSave: (clie
         </Select>
         <Input label="Próxima Fecha de Pago" name="nextPaymentDate" type="date" value={formData.nextPaymentDate} onChange={handleChange} required />
       </div>
+      <Textarea label="Notas (Opcional)" name="notes" value={formData.notes} onChange={handleChange} rows={3} /> {/* Nuevo campo de notas */}
       <div className="flex justify-end space-x-2 pt-4">
         <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
         <Button type="submit">{client ? 'Actualizar' : 'Crear'} Cliente</Button>
@@ -400,7 +431,8 @@ export const ClientManagement: React.FC = () => {
   }
   
   const handleCopyForSheets = () => {
-    const header = ['Nombre', 'RUC', 'Teléfono', 'Correo Electrónico', 'Tipo de Servicio', 'Unidades GPS', 'Monto de Pago', 'Frecuencia de Pago', 'Próxima Fecha de Pago'].join('\t');
+    // Actualizar encabezados para incluir 'Notas'
+    const header = ['Nombre', 'RUC', 'Teléfono', 'Correo Electrónico', 'Tipo de Servicio', 'Unidades GPS', 'Monto de Pago', 'Frecuencia de Pago', 'Próxima Fecha de Pago', 'Notas'].join('\t');
     const rows = filteredClients.map(c => [
         c.name,
         c.ruc || '',
@@ -410,7 +442,8 @@ export const ClientManagement: React.FC = () => {
         c.gpsUnits,
         c.paymentAmount,
         c.paymentFrequency,
-        new Date(c.nextPaymentDate).toISOString().split('T')[0]
+        new Date(c.nextPaymentDate).toISOString().split('T')[0],
+        c.notes || '' // Añadir notas
     ].join('\t')).join('\n');
 
     navigator.clipboard.writeText(header + '\n' + rows).then(() => {

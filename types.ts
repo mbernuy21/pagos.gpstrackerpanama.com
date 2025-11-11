@@ -36,6 +36,7 @@ export interface Client {
   paymentFrequency: PaymentFrequency;
   nextPaymentDate: string; // ISO string
   registrationDate: string; // ISO string
+  notes?: string; // Nuevo campo opcional
 }
 
 export interface Payment {
