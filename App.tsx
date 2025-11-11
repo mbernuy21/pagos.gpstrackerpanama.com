@@ -1,29 +1,27 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { Layout, Sidebar, Header } from './components/layout/Layout';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { useFirestoreData } from './hooks/useFirestoreData';
 import { DataContext } from './hooks/DataContext';
 import { Chatbot } from './components/chatbot/Chatbot';
-import { FileText, Grid, Users } from 'lucide-react';
+import { FileText, Grid, Users, Menu, Loader } from 'lucide-react'; // Import Menu and Loader
 import { Toaster } from 'react-hot-toast';
 import { PaymentManagement } from './components/payments/PaymentManagement';
 import { AuthProvider, AuthContext } from './hooks/AuthContext'; 
-import { Loader } from 'lucide-react';
-import { Auth } from './components/auth/Auth'; // Import Auth component
-import { useContext } from 'react'; // Import useContext for AuthContext
+import { Auth } from './components/auth/Auth'; 
+import { useContext } from 'react'; 
 import { ClientManagement } from './components/clients/ClientManagement';
 
 export type View = 'dashboard' | 'clients' | 'payments';
 
 const AppContent: React.FC = () => {
-  // --- CAMBIOS PARA RESTAURAR AUTENTICACIÓN ---
   const { user, loading: authLoading } = useContext(AuthContext)!;
-  // --- FIN CAMBIOS ---
 
   const [view, setView] = useState<View>('dashboard');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false); // New state for mobile sidebar
   
-  // useFirestoreData ahora recibe el userId del usuario autenticado
   const data = useFirestoreData(user?.uid); 
 
   const contextValue = useMemo(() => data, [data]);
@@ -34,7 +32,6 @@ const AppContent: React.FC = () => {
     { name: 'Pagos', icon: FileText, view: 'payments' as View },
   ];
   
-  // Mostramos un loader si la autenticación o los datos de Firestore están cargando
   if (authLoading || data.loading) { 
       return (
           <div className="flex items-center justify-center h-screen bg-slate-100 dark:bg-slate-900">
@@ -43,7 +40,6 @@ const AppContent: React.FC = () => {
       )
   }
 
-  // Si no hay usuario autenticado, mostramos la pantalla de autenticación
   if (!user) {
     return <Auth />;
   }
@@ -51,11 +47,20 @@ const AppContent: React.FC = () => {
   return (
     <DataContext.Provider value={contextValue}>
       <div className="min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
-        <Layout>
-          <Sidebar currentView={view} setView={setView} navigationItems={navigationItems} />
+        <Layout isMobileSidebarOpen={isMobileSidebarOpen} setIsMobileSidebarOpen={setIsMobileSidebarOpen}> {/* Pass state to Layout */}
+          <Sidebar 
+            currentView={view} 
+            setView={setView} 
+            navigationItems={navigationItems} 
+            isMobileSidebarOpen={isMobileSidebarOpen} // Pass state to Sidebar
+            onClose={() => setIsMobileSidebarOpen(false)} // Pass close function to Sidebar
+          />
           <div className="flex flex-col flex-1">
-            {/* FIX: Removed `userEmail` prop from Header component as it's no longer required and handled via context. */}
-            <Header currentView={view} navigationItems={navigationItems} />
+            <Header 
+              currentView={view} 
+              navigationItems={navigationItems} 
+              onMenuToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} // Pass toggle function to Header
+            />
             <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
               {view === 'dashboard' && <Dashboard setView={setView} />}
               {view === 'clients' && <ClientManagement />}

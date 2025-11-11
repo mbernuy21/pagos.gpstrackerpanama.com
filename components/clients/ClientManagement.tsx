@@ -441,10 +441,10 @@ export const ClientManagement: React.FC = () => {
                 <option value="inactive">Inactivos</option>
              </Select>
           </div>
-          <div className="flex items-center space-x-2 flex-shrink-0">
-             <Button variant="secondary" onClick={handleCopyForSheets}><Copy className="mr-2 h-4 w-4"/>Copiar p/ Sheets</Button>
-            <Button variant="secondary" onClick={() => setIsImportModalOpen(true)}><Upload className="mr-2 h-4 w-4"/>Importar</Button>
-            <Button onClick={openModalForNew}><PlusCircle className="mr-2 h-4 w-4" />Nuevo Cliente</Button>
+          <div className="flex flex-wrap items-center space-x-2 flex-shrink-0 justify-end">
+             <Button variant="secondary" onClick={handleCopyForSheets} className="whitespace-nowrap"><Copy className="mr-2 h-4 w-4"/>Copiar p/ Sheets</Button>
+            <Button variant="secondary" onClick={() => setIsImportModalOpen(true)} className="whitespace-nowrap"><Upload className="mr-2 h-4 w-4"/>Importar</Button>
+            <Button onClick={openModalForNew} className="whitespace-nowrap"><PlusCircle className="mr-2 h-4 w-4" />Nuevo Cliente</Button>
           </div>
         </CardHeader>
         <CardContent>
